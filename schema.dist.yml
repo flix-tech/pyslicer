@@ -1,0 +1,26 @@
+rules:
+    # reserved name: # upon_request: ~
+    # reserved name: # join: ~
+    since_last_month:
+        where: "%table_name%.`created_at` >= DATE_FORMAT(DATE_ADD(NOW(), INTERVAL -1 month), '%%Y-%%m-%%d 00:00:00')"
+    skip:
+        where: 1 = 0
+    full:
+        where: 1 = 1
+tables:
+    device_log:
+        rule: skip
+    cities:
+        rule: full
+    orders:
+        rule: since_last_month
+    order_items:
+        rule: join
+        table: orders
+        reference: order_id
+    users:
+        rule: upon_request
+        mask:
+            email: "CONCAT('nobody+', id, '@example.com')"
+            firstname: "'John'"
+            lastname: "'Doe'"
