@@ -5,7 +5,10 @@ from random import randint
 from datasource import DataRegistry
 from slicer import SlicingMachine,cleanup
 from cupboard import RedisCupboard
-from util import resolve_settings,get_connection_factory,get_connection_parameters
+from util import resolve_settings, \
+                 get_connection_factory, \
+                 get_connection_parameters, \
+                 copy_database_schema
 
 if __name__ == '__main__':
     settings = resolve_settings(sys.argv[1:])
@@ -34,7 +37,12 @@ if __name__ == '__main__':
     else:
         table_list = data_registry.tables
 
-    if settings['cleanup']:
+    # copying schema imply recreating write database
+    if settings['copy_schema']:
+        copy_database_schema(read_connection_params, write_connection_params)
+    # in case schema is not copied existing tables will be truncated
+    # TODO check whether ALL tables should be trucated when '--tables' specified
+    elif settings['cleanup']:
         write_connection = write_connection_creator()
         cleanup(write_connection, data_registry.tables)
 
