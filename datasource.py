@@ -131,7 +131,7 @@ class DataRegistry:
         else:
             raise ValueError("Table '{}' has no fields".format(table_name))
 
-class GenericReader:
+class BaseReader:
     def __init__(self, table, fields, references):
         self.table = table
         self.fields = fields
@@ -225,7 +225,11 @@ class GenericReader:
             'references': references,
         }
 
-class ConditionReader(GenericReader):
+class GenericReader(BaseReader):
+    def fetch_data(self, chunk_size):
+        return []
+
+class ConditionReader(BaseReader):
     def __init__(self, table, fields, references, where):
         super().__init__(table, fields, references)
         self.where = where
@@ -234,7 +238,7 @@ class ConditionReader(GenericReader):
         sql = super().sql_query() + ' WHERE ' + self.where
         return sql
 
-class JoinReader(GenericReader):
+class JoinReader(BaseReader):
     def __init__(self, table, fields, references, foreign_key, reference_sql, join_fields):
         super().__init__(table, fields, references)
         self.reference_sql = reference_sql
@@ -258,7 +262,7 @@ class JoinReader(GenericReader):
             self.reference_sql + ' LIMIT %s, %s'
         )
         ref_offset = 0
-        ref_chunk_size = 5000
+        ref_chunk_size = 20000
         cursor = self.connection.cursor()
         while ref_cursor.execute(ref_sql, (ref_offset, ref_chunk_size,)):
             ref_offset += ref_chunk_size
