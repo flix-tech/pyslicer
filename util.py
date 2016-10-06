@@ -9,8 +9,7 @@ def usage():
     -h, --help            - shows help information
     -r, --read ...        - specify name of read connection
     -w, --write ...       - specify name of write connection
-    -c, --connections     - list available connections
-    -s, --start-over      - clean up mysql and redis before start
+    -c, --continue        - don't empty Redis db and don't truncate tables
     -t, --tables ...      - comma separated list of tables
         --copy-schema     - copies schema from source database
                             (target database will be deleted and recreated)
@@ -27,7 +26,7 @@ def resolve_settings(argv):
         opts, args = getopt(
             argv,
             'hr:w:ct:',
-            ['help', 'read=', 'write=', 'connections', 'tables=', 'copy-schema']
+            ['help', 'read=', 'write=', 'continue', 'tables=', 'copy-schema']
         )
     except GetoptError:
         usage()
