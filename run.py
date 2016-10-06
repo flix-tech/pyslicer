@@ -1,4 +1,5 @@
 import sys
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 from random import randint
 from datasource import DataRegistry
@@ -40,7 +41,12 @@ if __name__ == '__main__':
     read_connection.close()
     write_connection.close()
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
         executor.map(slicing_machine.slice_table, table_list)
 
     slicing_machine.persist_references()
+
+    print('started copying data at', started_at)
+    print('completed at', datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
