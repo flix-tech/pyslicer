@@ -13,8 +13,10 @@ from util import resolve_settings, \
 if __name__ == '__main__':
     settings = resolve_settings(sys.argv[1:])
     configuration = Configuration()
-    read_connection_params = configuration.get_mysql_parameters(settings['read']);
-    read_connection_creator = get_connection_factory(read_connection_params)
+
+    mysql_params = [configuration.get_mysql_parameters(connection_name) for connection_name in settings['read'].split(',')];
+    read_connection_params = mysql_params[0];
+    read_connection_creator = get_connection_factory(*mysql_params)
 
     write_connection_params = configuration.get_mysql_parameters(settings['write'])
     write_connection_creator = get_connection_factory(write_connection_params)
@@ -46,9 +48,9 @@ if __name__ == '__main__':
     elif settings['cleanup']:
         write_connection = write_connection_creator()
         cleanup(write_connection, data_registry.tables)
+        write_connection.close()
 
     read_connection.close()
-    write_connection.close()
 
     started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 

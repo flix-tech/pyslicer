@@ -2,6 +2,7 @@ from getopt import getopt,GetoptError
 import MySQLdb
 import yaml
 import subprocess
+import itertools
 
 def usage():
     print('''Slicer v0.1:
@@ -59,8 +60,8 @@ def resolve_settings(argv):
         "copy_schema": copy_schema,
     }
 
-def get_connection_factory(parameters):
-    _conn = {
+def get_connection_factory(*parameter_sets):
+    _conns = itertools.cycle([{
         'host': parameters["host"],
         'port': parameters["port"],
         'user': parameters["user"],
@@ -68,9 +69,9 @@ def get_connection_factory(parameters):
         'db': parameters["database"],
         'use_unicode': True,
         'charset': "utf8"
-    }
+    } for parameters in parameter_sets])
 
-    return lambda: MySQLdb.connect(**_conn)
+    return lambda: MySQLdb.connect(**next(_conns))
 
 def mysql_cmd_string(params: dict, cmd = 'mysql', select_db = False):
     return cmd + \
