@@ -2,20 +2,21 @@ import sys
 import datetime
 from concurrent.futures import ThreadPoolExecutor
 from random import randint
+from config import Configuration
 from datasource import DataRegistry
 from slicer import SlicingMachine,cleanup
 from cupboard import RedisCupboard
 from util import resolve_settings, \
                  get_connection_factory, \
-                 get_connection_parameters, \
                  copy_database_schema
 
 if __name__ == '__main__':
     settings = resolve_settings(sys.argv[1:])
-    read_connection_params = get_connection_parameters(settings['read']);
+    configuration = Configuration()
+    read_connection_params = configuration.get_mysql_parameters(settings['read']);
     read_connection_creator = get_connection_factory(read_connection_params)
 
-    write_connection_params = get_connection_parameters(settings['write'])
+    write_connection_params = configuration.get_mysql_parameters(settings['write'])
     write_connection_creator = get_connection_factory(write_connection_params)
 
     read_connection = read_connection_creator()
@@ -27,7 +28,7 @@ if __name__ == '__main__':
         data_registry,
         read_connection_creator,
         write_connection_creator,
-        RedisCupboard(settings['cleanup'])
+        RedisCupboard(settings['cleanup'], **configuration.get_redis_parameters())
     )
 
     if len(settings['tables']):
@@ -51,7 +52,7 @@ if __name__ == '__main__':
 
     started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=configuration.get_max_workers()) as executor:
         executor.map(slicing_machine.slice_table, table_list)
 
     slicing_machine.persist_references()

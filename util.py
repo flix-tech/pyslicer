@@ -59,14 +59,6 @@ def resolve_settings(argv):
         "copy_schema": copy_schema,
     }
 
-def get_connection_parameters(connection_name):
-    with open('config.yml') as config_file:
-        config = yaml.load(config_file)
-
-    assert connection_name in config["connection"], "Read connection settings not found"
-
-    return config["connection"][connection_name]
-
 def get_connection_factory(parameters):
     _conn = {
         'host': parameters["host"],
