@@ -36,12 +36,16 @@ class DataRegistry:
         assert 'rule' in tables[table], 'No rule provided for table %s' % (table,)
 
         rule = tables[table]['rule']
+        mask = tables[table]['mask'] if 'mask' in tables[table] else {}
+
+        assert isinstance(mask, dict), 'Invalid type of "mask" parameter'
 
         if rule == 'upon_request':
             reader = GenericReader(
                 table,
                 self.metadata[table]['fields'],
-                self.metadata[table]['refs']
+                self.metadata[table]['refs'],
+                mask
             )
         elif rule == 'join':
             assert tables[table]['table'] in self.metadata, \
@@ -50,6 +54,7 @@ class DataRegistry:
                 table,
                 self.metadata[table]['fields'],
                 self.metadata[table]['refs'],
+                mask,
                 tables[table]['reference'],
                 self.get_table_reader(tables[table]['table']).sql_query(),
                 self.metadata[tables[table]['table']]['fields']
@@ -60,6 +65,7 @@ class DataRegistry:
                 table,
                 self.metadata[table]['fields'],
                 self.metadata[table]['refs'],
+                mask,
                 rules[rule]['where'].replace('%table_name%', '`' + table + '`')
             )
 
@@ -132,11 +138,12 @@ class DataRegistry:
             raise ValueError("Table '{}' has no fields".format(table_name))
 
 class BaseReader:
-    def __init__(self, table, fields, references):
+    def __init__(self, table, fields, references, mask = None):
         self.table = table
         self.fields = fields
         self.references = references
         self.offset = 0
+        self.mask = mask
 
     def set_connection(self, connection):
         self.connection = connection
@@ -156,7 +163,7 @@ class BaseReader:
         assert self.connection, 'Cannot read table data without database connection'
 
         cursor = self.connection.cursor()
-        fields = ','.join(['`%s`' % field for field in self.fields['__order__']])
+        fields = self.__combine_fields()
         sql = 'SELECT %s FROM `%s` WHERE `%s` IN (%s)' % \
             (fields, self.table, self.fields['__primary__'], ','.join([key.decode('utf-8') for key in keys]))
 
@@ -166,8 +173,21 @@ class BaseReader:
         return result
 
     def sql_query(self):
-        fields = ','.join(['`%s`' % field for field in self.fields['__order__']])
+        fields = self.__combine_fields()
         return 'SELECT %s FROM `%s`' % (fields, self.table,)
+
+    def __combine_fields(self):
+        if self.mask and len(self.mask):
+            fields = []
+            for field in self.fields['__order__']:
+                if field in self.mask:
+                    fields.append('%s as "%s"' % (self.mask[field], field,))
+                else:
+                    fields.append('`%s`' % field)
+            fields = ','.join(fields)
+        else:
+            fields = ','.join(['`%s`' % field for field in self.fields['__order__']])
+        return fields
 
     def populate_record(self, record_data):
         def __cast_number(value):
@@ -230,8 +250,8 @@ class GenericReader(BaseReader):
         return []
 
 class ConditionReader(BaseReader):
-    def __init__(self, table, fields, references, where):
-        super().__init__(table, fields, references)
+    def __init__(self, table, fields, references, mask, where):
+        super().__init__(table, fields, references, mask)
         self.where = where
 
     def sql_query(self):
@@ -239,8 +259,8 @@ class ConditionReader(BaseReader):
         return sql
 
 class JoinReader(BaseReader):
-    def __init__(self, table, fields, references, foreign_key, reference_sql, join_fields):
-        super().__init__(table, fields, references)
+    def __init__(self, table, fields, references, mask, foreign_key, reference_sql, join_fields):
+        super().__init__(table, fields, references, mask)
         self.reference_sql = reference_sql
         self.foreign_key = foreign_key
         self.join_fields = join_fields
