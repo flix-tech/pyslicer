@@ -1,4 +1,4 @@
-# PySlicer v0.1
+# PySlicer v0.2
 
 ### ⇒ wtf is that?
 
@@ -44,12 +44,13 @@ $ mysqldump ... --routines --no-create-db --quick --skip-triggers | sed -E "s/DE
 
 ### ⇒ roadmap
 
-It's only v0.1, what's next? It needs a lot of stuff
+It's only v0.2, what's next? It needs a lot of stuff:
 
-* parameters for Redis connection in configuration file
-* option to set max number workers
+* ~~parameters for Redis connection in configuration file~~
+* ~~option to set max number workers~~
 * option to specify path to schema file
-* support for several read connections (e.g. different slaves)
+* ~~support for several read connections (e.g. different slaves)~~
+* pretty names generator based on hash of source value
 * export and pack the resulting database
 * multi-threading implementation for reference traverse
 * fancy progress bar
