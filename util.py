@@ -76,30 +76,24 @@ def get_connection_factory(*parameter_sets):
 def mysql_cmd_string(params: dict, cmd = 'mysql', select_db = False):
     return cmd + \
         ' -u"%s"' % (params['user'],) + \
-        (' -p"%s"' % (params['password'],) if params['password'] else '') + \
+        (' -p"%s"' % (params['password'].replace('"', '\\"').replace('`', '\\`'),) if params['password'] else '') + \
         ' -h"%s"' % (params['host'],) + \
         ' -P"%s"' % (str(params['port']) if params['port'] else '3306',) + \
         ' ' + (params['database'] if select_db else '')
 
-def copy_database_schema(read_connection_params, write_connection_params):
-    mysqldump_cmd = mysql_cmd_string(read_connection_params, 'mysqldump', True) + \
-        ' --skip-triggers' + \
-        ' --routines' + \
-        ' --no-data' + \
-        ' --quick'
-    mysql_drop_cmd = mysql_cmd_string(write_connection_params) + \
-        '-e "DROP DATABASE IF EXISTS %s"' % (write_connection_params['database'],)
-    mysql_create_cmd = mysql_cmd_string(write_connection_params) + \
-        '-e "CREATE DATABASE %s COLLATE utf8_unicode_ci"' % (write_connection_params['database'],)
-    mysql_copy_cmd = mysqldump_cmd + \
-        ' | ' + mysql_cmd_string(write_connection_params, select_db = True)
+def copy_database_schema(data_registry, write_connection):
+    write_connection.query('SET FOREIGN_KEY_CHECKS=0')
 
-    commands = [
-        mysql_drop_cmd,
-        mysql_create_cmd,
-        mysql_copy_cmd,
-    ]
+    for table in data_registry.tables:
+        create_sql = data_registry.get_create_table(table)
+        write_connection.query('DROP TABLE IF EXISTS `%s`' % (table,))
+        write_connection.query(create_sql)
 
-    for cmd in commands:
-        run = subprocess.Popen(cmd, shell=True, stdout=None)
-        run.wait()
+    for routine in data_registry.routines:
+        if routine.type == 'PROCEDURE':
+            write_connection.query('DROP PROCEDURE IF EXISTS `%s`' % (routine.name,))
+        elif routine.type == 'FUNCTION':
+            write_connection.query('DROP FUNCTION IF EXISTS `%s`' % (routine.name,))
+        else:
+            raise RuntimeError('Unknown routine type: %s' % (routine.type,))
+        write_connection.query(routine.create_sql)

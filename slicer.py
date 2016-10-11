@@ -62,21 +62,31 @@ class SlicingMachine:
                 writer = self.__create_table_writer(table, write_connection)
                 record_keys = list(record_keys)
                 reader.set_connection(read_connection)
-                while offset < len(record_keys):
-                    keys = record_keys[offset:offset+chunk_size]
-                    records = reader.get_records(*keys)
-                    offset += chunk_size
-                    new_record_keys = list()
-                    for record in records:
-                        new_record_keys.append(record['primary_key'])
-                        for ref_table, primary_key in record['references'].items():
-                            if primary_key:
-                                references.add((ref_table, primary_key,))
-                    self.cupboard.put_on_shelf(table, *new_record_keys)
-                    writer.persist(*records, ignore_duplicates = True)
-                print('References for table "' + table + '":', len(record_keys))
-                writer.commit()
-                self.cupboard.put_on_reference_shelf(references)
+
+                try:
+                    while offset < len(record_keys):
+                        keys = record_keys[offset:offset+chunk_size]
+                        records = reader.get_records(*keys)
+                        offset += chunk_size
+                        new_record_keys = list()
+                        for record in records:
+                            new_record_keys.append(record['primary_key'])
+                            for ref_table, primary_key in record['references'].items():
+                                if primary_key:
+                                    references.add((ref_table, primary_key,))
+                        self.cupboard.put_on_shelf(table, *new_record_keys)
+                        writer.persist(*records, ignore_duplicates = True)
+                    print('References for table "' + table + '":', len(record_keys))
+                    writer.commit()
+                    self.cupboard.put_on_reference_shelf(references)
+                except:
+                    print('Error when copying references to "%s"' % (table,))
+                    print(sys.exc_info()[1])
+                    if read_connection.errno():
+                        print(read_connection.error())
+                    self.cupboard.clear_shelf(table)
+                    writer.rollback()
+
         read_connection.close()
         write_connection.close()
 

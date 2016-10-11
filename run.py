@@ -40,16 +40,17 @@ if __name__ == '__main__':
     else:
         table_list = data_registry.tables
 
+    write_connection = write_connection_creator()
+
     # copying schema imply recreating write database
     if settings['copy_schema']:
-        copy_database_schema(read_connection_params, write_connection_params)
+        copy_database_schema(data_registry, write_connection)
     # in case schema is not copied existing tables will be truncated
     # TODO check whether ALL tables should be trucated when '--tables' specified
     elif settings['cleanup']:
-        write_connection = write_connection_creator()
         cleanup(write_connection, data_registry.tables)
-        write_connection.close()
 
+    write_connection.close()
     read_connection.close()
 
     started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")

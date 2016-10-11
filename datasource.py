@@ -6,15 +6,18 @@ from copy import deepcopy
 class DataRegistry:
     tables = None
     metadata = None
+    routines = None
 
     def __init__(self, db_name, connection):
         self.tables = self.__load_table_list(connection)
         self.metadata = dict(zip(self.tables, [
             {
                 'fields': self.__load_fields(connection, db_name, table),
-                'refs': self.__load_references(connection, db_name, table)
+                'refs': self.__load_references(connection, db_name, table),
+                'create_sql': self.__table_create_sql(connection, table),
             } for table in self.tables
         ]))
+        self.routines = self.__load_routines(connection, db_name)
         self.__schema_configuration = self.__load_schema_configuration('./schema.yml')
         self.__table_readers = dict()
 
@@ -25,6 +28,24 @@ class DataRegistry:
         assert 'tables' in configuration, 'Table list is missing in schema configuration'
 
         return configuration
+
+    def get_create_table(self, table):
+        assert table in self.metadata, 'Unknown table'
+
+        return self.metadata[table]['create_sql']
+
+    def __table_create_sql(self, connection, table):
+        cursor = connection.cursor()
+        result = cursor.execute('SHOW CREATE TABLE `%s`' % (table,))
+
+        if result:
+            create_sql = cursor.fetchone()[1]
+        else:
+            raise RuntimeError(connection.error())
+
+        cursor.close()
+
+        return create_sql
 
     def get_table_reader(self, table):
         if table in self.__table_readers:
@@ -72,6 +93,28 @@ class DataRegistry:
         self.__table_readers[table] = reader
 
         return reader
+
+    def __load_routines(self, connection, database):
+        query = """
+            SELECT ROUTINE_NAME, ROUTINE_TYPE
+            FROM information_schema.ROUTINES
+            WHERE ROUTINE_SCHEMA = %s
+        """
+        cursor = connection.cursor()
+        result = cursor.execute(query, (database,))
+        routines = list()
+
+        for routine_row in cursor.fetchall():
+            routine_name, routine_type = routine_row
+            cursor.execute('SHOW CREATE %s `%s`' % (routine_type, routine_name))
+            create_sql = cursor.fetchone()[2]
+            create_sql = re.sub('DEFINER=[^\s]+\s', '', create_sql)
+            routines.append(Routine(routine_name, routine_type, create_sql))
+
+        cursor.close()
+
+        return routines
+
 
     def __load_table_list(self, connection):
         query = 'SHOW TABLES'
@@ -136,6 +179,12 @@ class DataRegistry:
             return fields
         else:
             raise ValueError("Table '{}' has no fields".format(table_name))
+
+class Routine:
+    def __init__(self, name, type, create_sql):
+        self.name = name
+        self.type = type
+        self.create_sql = create_sql
 
 class BaseReader:
     def __init__(self, table, fields, references, mask = None):
