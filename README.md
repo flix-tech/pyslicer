@@ -48,7 +48,7 @@ It's only v0.2, what's next? It needs a lot of stuff:
 
 * ~~parameters for Redis connection in configuration file~~
 * ~~option to set max number workers~~
-* option to specify path to schema file
+* ~~option to specify path to schema file~~
 * ~~support for several read connections (e.g. different slaves)~~
 * pretty names generator based on hash of source value
 * export and pack the resulting database

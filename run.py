@@ -24,6 +24,7 @@ if __name__ == '__main__':
     read_connection = read_connection_creator()
     data_registry = DataRegistry(
         read_connection_params['database'],
+        settings['schema_file'],
         read_connection
     )
     slicing_machine = SlicingMachine(

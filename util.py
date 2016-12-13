@@ -3,6 +3,7 @@ import MySQLdb
 import yaml
 import subprocess
 import itertools
+from os.path import isfile
 
 def usage():
     print('''Slicer v0.1:
@@ -22,12 +23,13 @@ def resolve_settings(argv):
     cleanup = True
     copy_schema = False
     table_list = []
+    schema_file = './schema.yml'
 
     try:
         opts, args = getopt(
             argv,
             'hr:w:ct:',
-            ['help', 'read=', 'write=', 'continue', 'tables=', 'copy-schema']
+            ['help', 'read=', 'write=', 'continue', 'tables=', 'copy-schema', 'schema-file=']
         )
     except GetoptError:
         usage()
@@ -46,11 +48,15 @@ def resolve_settings(argv):
             table_list = arg.split(",")
         elif opt in ("--copy-schema",):
             copy_schema = True
+        elif opt in ("--schema-file",):
+            schema_file = arg
 
     if not read_connection:
         raise RuntimeError("Read connection name is not specified")
     if not write_connection:
         raise RuntimeError("Write connection name is not specified")
+    if schema_file:
+        assert isfile(schema_file), 'Path to schema file is wrong.'
 
     return {
         "read": read_connection,
@@ -58,6 +64,7 @@ def resolve_settings(argv):
         "cleanup": cleanup,
         "tables": table_list,
         "copy_schema": copy_schema,
+        "schema_file": schema_file,
     }
 
 def get_connection_factory(*parameter_sets):

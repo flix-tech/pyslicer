@@ -2,13 +2,14 @@ import MySQLdb
 import yaml
 import re
 from copy import deepcopy
+from os.path import isfile
 
 class DataRegistry:
     tables = None
     metadata = None
     routines = None
 
-    def __init__(self, db_name, connection):
+    def __init__(self, db_name, schema_file, connection):
         self.tables = self.__load_table_list(connection)
         self.metadata = dict(zip(self.tables, [
             {
@@ -18,10 +19,12 @@ class DataRegistry:
             } for table in self.tables
         ]))
         self.routines = self.__load_routines(connection, db_name)
-        self.__schema_configuration = self.__load_schema_configuration('./schema.yml')
+        self.__schema_configuration = self.__load_schema_configuration(schema_file)
         self.__table_readers = dict()
 
     def __load_schema_configuration(self, filename):
+        assert isfile(filename), 'Schema file \'%s\' is missing.' % (filename,)
+
         with open(filename) as schema_data:
             configuration = yaml.load(schema_data)
 
