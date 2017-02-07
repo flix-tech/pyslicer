@@ -323,7 +323,7 @@ class JoinReader(BaseReader):
         elif 'id' in self.join_fields:
             return 'id'
         else:
-            return elf.join_fields['__primary__']
+            return self.join_fields['__primary__']
 
     def fetch_data(self, chunk_size):
         assert self.connection, 'Cannot read table data without database connection'
