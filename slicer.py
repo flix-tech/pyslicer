@@ -105,10 +105,11 @@ class TableWriter:
         connection.autocommit(False)
 
     def persist(self, *records, **opts):
+        fields = ['`%s`' % (field,) for field in self.fields]
         if 'ignore_duplicates' in opts and opts['ignore_duplicates']:
-            sql = 'INSERT IGNORE INTO `%s` (%s) VALUES' % (self.table, ', '.join(self.fields),)
+            sql = 'INSERT IGNORE INTO `%s` (%s) VALUES' % (self.table, ', '.join(fields),)
         else:
-            sql = 'INSERT INTO `%s` (%s) VALUES' % (self.table, ', '.join(self.fields),)
+            sql = 'INSERT INTO `%s` (%s) VALUES' % (self.table, ', '.join(fields),)
         offset = 0
         chunk_size = 500
         while offset < len(records):
